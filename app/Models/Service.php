@@ -4,7 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(["name","price"])]
+#[Fillable(["name","description","price","partner_id"])]
 class Service extends Model
 {
     //

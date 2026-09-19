@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string("name");
             $table->integer("price");
+            $table->foreignId('partner_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }

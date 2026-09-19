@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['name','email','phone','booking_date','status'])]
+#[Fillable(['name','email','phone','image','service','option','booking_date','partner_id'])]
 class Booking extends Model
 {
     //

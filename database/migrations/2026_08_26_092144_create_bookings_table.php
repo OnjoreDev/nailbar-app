@@ -16,6 +16,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('email');
             $table->string('phone');
+            $table->string('image');
+            $table->string('service');
+            $table->enum('option',['manicure','pedicure','both']);//manicure, pedicure,both
+            $table->foreignId('partner_id')->constrained()->cascadeOnDelete();
             $table->date('booking_date');
             $table->string('status')->default('confirmed');
             $table->timestamps();
