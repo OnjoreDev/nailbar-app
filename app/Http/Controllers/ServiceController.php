@@ -2,103 +2,96 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use App\Models\Service;
-
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ServiceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //all services
-        $services = Service::orderBy('id', 'DESC')->get();
+        $merchant = Auth::user()->merchant;
+        $services = Service::where('merchant_id', $merchant->id)->latest()->get();
 
-        //convert array into json string to display in log file
-        Log::info("All services:", ["services" => $services]);
-
-        return view('services.index', compact("services"));
+        return view('merchant.services.index', compact('services'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //go to the view
-        return view('services.create');
+        return view('merchant.services.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
-        $validated = $request->validate([
-            "name" => 'required|string|max:200',
-            "price" => 'required|numeric|min:1'
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'description' => 'nullable|string',
         ]);
 
-        $created = Service::create($validated);
-
-        if ($created) {
-            Log::info("Insert successful");
-            return redirect()->route('services.index');
-        } else {
-            Log::info("Insert Failed");
-            return back()->with('error', 'Insert failed!');
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('services', 'public');
         }
+
+        Service::create([
+            'merchant_id' => Auth::user()->merchant->id,
+            'name' => $request->name,
+            'price' => $request->price,
+            'image' => $imagePath,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->route('merchant.services.index')->with('success', 'Service added successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Service $service)
-    {
-        //get service by id
-        return view('services.show', compact('service'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Service $service)
     {
-        //get the view and use the values in the db array to populate fields
-        return view('services.edit', compact('service'));
+        // Ensure service belongs to authenticated merchant
+        abort_if($service->merchant_id !== Auth::user()->merchant->id, 403);
+
+        return view('merchant.services.edit', compact('service'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Service $service)
     {
-        //
-        $validated = $request->validate([
-            "name" => 'required|string|max:200',
-            "price" => 'required|numeric|min:1'
+        abort_if($service->merchant_id !== Auth::user()->merchant->id, 403);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'description' => 'nullable|string',
         ]);
 
-        $updated = $service->update($validated);
-
-        if ($updated) {
-            Log::info("Update successful.");
-            return redirect()->route('services.index')->with('success', 'Update successful.');
-        }else {
-            Log::error("Update failed");
-            return back()->with('error','Update failed');
+        if ($request->hasFile('image')) {
+            if ($service->image) {
+                Storage::disk('public')->delete($service->image);
+            }
+            $service->image = $request->file('image')->store('services', 'public');
         }
+
+        $service->update([
+            'name' => $request->name,
+            'price' => $request->price,
+            'image' => $service->image,
+            'description' => $request->description,
+        ]);
+
+        return redirect()->route('merchant.services.index')->with('success', 'Service updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function destroy(Service $service)
     {
-        //
+        abort_if($service->merchant_id !== Auth::user()->merchant->id, 403);
+
+        if ($service->image) {
+            Storage::disk('public')->delete($service->image);
+        }
+        $service->delete();
+
+        return redirect()->route('merchant.services.index')->with('success', 'Service deleted successfully.');
     }
 }

@@ -1,62 +1,93 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            Create Booking
-        </h2>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+               <h2 class="font-bold text-2xl text-gray-900 leading-tight">
+                    {{ $merchant->business_name ?? 'Nail Studio' }}
+                </h2>
+                <p class="text-sm text-gray-500 mt-1">{{ $merchant->bio ?? 'Choose your service and pick an available date.' }}</p>
+            </div>
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-pink-50 text-pink-700 rounded-full text-xs font-semibold">
+                <span>📍 Daily Cap: Max 10 Clients</span>
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 text-gray-900 dark:text-gray-100">
-                
-                <form action="{{ route('bookings.store') }}" method="POST" class="max-w-xl space-y-6">
+        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-900 mb-6">Book Your Appointment</h3>
+
+                @if($errors->any())
+                    <div class="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm">
+                        <ul class="list-disc list-inside space-y-1">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form action="{{ route('tenant.booking.check-availability', $merchant->slug) }}" method="POST" class="space-y-6">
                     @csrf
 
-                    <!-- Name Field -->
-                    <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Client Name</label>
-                        <input type="text" name="name" id="name" value="{{ old('name') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        @error('name')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-2">Your Name</label>
+                            <input type="text" name="client_name" value="{{ old('client_name') }}" required placeholder="Jane Doe" class="w-full rounded-2xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-sm p-3.5">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase text-gray-500 mb-2">Phone Number</label>
+                            <input type="text" name="client_phone" value="{{ old('client_phone') }}" required placeholder="0712345678" class="w-full rounded-2xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-sm p-3.5">
+                        </div>
                     </div>
 
-                    <!-- Email Field -->
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
-                        <input type="email" name="email" id="email" value="{{ old('email') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        @error('email')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-2">Email Address (Optional)</label>
+                        <input type="email" name="client_email" value="{{ old('client_email') }}" placeholder="jane@example.com" class="w-full rounded-2xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-sm p-3.5">
                     </div>
 
-                    <!-- Phone Field -->
                     <div>
-                        <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
-                        <input type="text" name="phone" id="phone" value="{{ old('phone') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        @error('phone')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-3">Select Service</label>
+                        <div class="space-y-3">
+                            @forelse($services as $service)
+                                <label class="relative flex items-center justify-between p-4 rounded-2xl border border-gray-200 hover:border-pink-300 bg-gray-50/50 cursor-pointer transition">
+                                    <div class="flex items-center gap-4">
+                                        <input type="radio" name="service_id" value="{{ $service->id }}" {{ old('service_id') == $service->id ? 'checked' : '' }} required class="text-pink-600 focus:ring-pink-500 h-4 w-4">
+                                        @if($service->image)
+                                            <img src="{{ asset('storage/' . $service->image) }}" alt="{{ $service->name }}" class="w-12 h-12 rounded-xl object-cover">
+                                        @endif
+                                        <div>
+                                            <p class="font-bold text-gray-900 text-sm">{{ $service->name }}</p>
+                                            <p class="text-xs text-gray-500 line-clamp-1 mt-0.5">{{ $service->description }}</p>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-pink-600 text-sm">KSh {{ number_format($service->price, 2) }}</span>
+                                </label>
+                            @empty
+                                <div class="p-6 text-center text-gray-400 text-sm border border-dashed border-gray-200 rounded-2xl">
+                                    No services currently available for booking.
+                                </div>
+                            @endforelse
+                        </div>
                     </div>
 
-                    <!-- Booking Date Field -->
                     <div>
-                        <label for="booking_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Booking Date</label>
-                        <input type="date" name="booking_date" id="booking_date" value="{{ old('booking_date') }}" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                        @error('booking_date')
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
-                        @enderror
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-2">Appointment Date</label>
+                        <input type="date" name="booking_date" value="{{ old('booking_date', date('Y-m-d')) }}" min="{{ date('Y-m-d') }}" required class="w-full rounded-2xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-sm p-3.5">
                     </div>
 
-                    <!-- Submit Button -->
-                    <div class="flex items-center space-x-4">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-white dark:text-gray-800 uppercase tracking-widest hover:bg-gray-700 dark:hover:bg-white focus:outline-none transition ease-in-out duration-150">
-                            Save Booking
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-gray-500 mb-2">Special Notes</label>
+                        <textarea name="notes" rows="3" placeholder="Any design preferences or special requests..." class="w-full rounded-2xl border-gray-200 focus:border-pink-500 focus:ring-pink-500 text-sm p-3.5">{{ old('notes') }}</textarea>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit" class="w-full py-4 bg-pink-600 text-white rounded-2xl font-semibold text-sm hover:bg-pink-700 transition shadow-lg shadow-pink-600/20 text-center">
+                            Proceed to Payment (KSh 500 Deposit) &rarr;
                         </button>
-                        <a href="{{ route('bookings.index') }}" class="text-sm text-gray-600 dark:text-gray-400 underline">Cancel</a>
                     </div>
                 </form>
-
             </div>
         </div>
     </div>

@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->string("name");
-            $table->integer("price");
-            $table->foreignId('partner_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('merchant_id')->constrained()->cascadeOnDelete(); // Removed ->after('id')
+            $table->string('name'); // Service name (e.g., Acrylic Full Set)
+            $table->decimal('price', 8, 2); // Service price
+            $table->string('image')->nullable(); // Path to service image
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }
