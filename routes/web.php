@@ -5,6 +5,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceController;
 use Illuminate\Support\Facades\Route;
+use App\Models\Booking;
 
 Route::get('/', function () {
     return view('welcome');
@@ -29,12 +30,17 @@ Route::middleware(['auth', 'role:merchant'])->prefix('merchant')->name('merchant
 });
 
 // 4. Booking & Payment Flow
-Route::get('/booking/payment', [PaymentController::class, 'showPaymentForm'])->name('booking.payment');
-Route::post('/booking/initiate-stk', [PaymentController::class, 'initiateStkPush'])->name('booking.initiate-stk');
-Route::post('/booking/cash-checkout', [PaymentController::class, 'processCashBooking'])->name('booking.cash-checkout');
-Route::get('/booking/success/{booking}', [BookingsController::class, 'success'])->name('bookings.success');
+Route::get('/booking/payment', [PaymentController::class, 'showPayment'])->name('booking.payment');
+Route::post('/booking/initiate-stk', [PaymentController::class, 'initiateStkPayment'])->name('booking.initiate-stk');
+Route::post('/booking/cash-checkout', [PaymentController::class, 'cashCheckout'])->name('booking.cash-checkout');
+Route::get('/booking/success/{booking}', [BookingsController::class, 'success'])->name('booking.success');
+// Add this inside routes/web.php
+Route::get('/booking/status/{booking}', [PaymentController::class, 'checkStatus'])->name('booking.status');
+Route::get('/booking/waiting/{booking}', function (Booking $booking) {
+    return view('bookings.waiting', compact('booking'));
+})->name('booking.waiting');
+Route::get('/{merchant:slug}/fully-booked', [BookingsController::class, 'fullyBooked'])->name('booking.fully-booked');
 
 // 5. Tenant Public Booking Flow (Must be at the very bottom so it doesn't swallow /dashboard or /login)
 Route::get('/{merchant:slug}', [BookingsController::class, 'create'])->name('tenant.booking.create');
 Route::post('/{merchant:slug}/check-availability', [BookingsController::class, 'checkAvailability'])->name('tenant.booking.check-availability');
-require __DIR__ . '/auth.php';

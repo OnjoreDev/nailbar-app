@@ -75,6 +75,6 @@
         <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500 mt-20">
             <p>&copy; {{ date('Y') }} NailPro SaaS. Built with Laravel & Tailwind CSS.</p>
         </footer>
-
+@stack('scripts')
     </body>
 </html>

@@ -28,6 +28,65 @@
                     </div>
                 @endif
 
+                <!-- Monthly Availability Calendar Widget -->
+                <div class="mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-gray-900 text-base">
+                            {{ $startOfMonth->format('F Y') }} Availability
+                        </h4>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-100 border border-green-300 inline-block"></span> Available</span>
+                            <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-100 border border-red-300 inline-block"></span> Full (10/10)</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-400 mb-2">
+                        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-2">
+                        @php
+                            $daysInMonth = $startOfMonth->daysInMonth;
+                            $startDayOfWeek = ($startOfMonth->dayOfWeekIso - 1); // 0 for Monday
+                        @endphp
+
+                        {{-- Blank padding spaces for offset days --}}
+                        @for($i = 0; $i < $startDayOfWeek; $i++)
+                            <div></div>
+                        @endfor
+
+                        @for($day = 1; $day <= $daysInMonth; $day++)
+                            @php
+                                $currentDate = $startOfMonth->copy()->day($day)->toDateString();
+                                $count = $bookedCounts[$currentDate] ?? 0;
+                                $isFull = $count >= 10;
+                                $isPast = $currentDate < today()->toDateString();
+                            @endphp
+
+                            @if($isPast || $isFull)
+                                {{-- Disabled/Unclickable for past or full dates --}}
+                                <div class="p-2 rounded-2xl border text-center opacity-75 
+                                    @if($isPast) bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed
+                                    @elseif($isFull) bg-red-50 text-red-700 border-red-200 font-bold cursor-not-allowed @endif">
+                                    <span class="block text-sm font-bold">{{ $day }}</span>
+                                    <span class="block text-[10px] mt-0.5">
+                                        @if($isPast) Past @else Fully Booked @endif
+                                    </span>
+                                </div>
+                            @else
+                                {{-- Clickable Available Date --}}
+                                <div onclick="selectDate('{{ $currentDate }}')" 
+                                    class="p-2 rounded-2xl border text-center cursor-pointer transition bg-green-50/50 text-green-800 border-green-200 hover:border-pink-500 hover:bg-pink-50 hover:text-pink-700 group">
+                                    <span class="block text-sm font-bold group-hover:scale-105 transition-transform">{{ $day }}</span>
+                                    <span class="block text-[10px] mt-0.5 text-green-600 group-hover:text-pink-600 font-medium">
+                                        {{ 10 - $count }} slots left
+                                    </span>
+                                </div>
+                            @endif
+                        @endfor
+                    </div>
+                </div>
+
                 <form action="{{ route('tenant.booking.check-availability', $merchant->slug) }}" method="POST" class="space-y-6">
                     @csrf
 
@@ -91,4 +150,20 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        function selectDate(dateString) {
+            const dateInput = document.querySelector('input[name="booking_date"]');
+            if (dateInput) {
+                dateInput.value = dateString;
+                dateInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                dateInput.classList.add('ring-2', 'ring-pink-500', 'border-pink-500');
+                setTimeout(() => {
+                    dateInput.classList.remove('ring-2', 'ring-pink-500');
+                }, 1500);
+            }
+        }
+    </script>
+    @endpush
 </x-app-layout>

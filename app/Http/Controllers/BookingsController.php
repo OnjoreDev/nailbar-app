@@ -7,13 +7,30 @@ use App\Models\Merchant;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; // <-- Fixes the Intelephense missing import warning
+use Carbon\Carbon;
 
 class BookingsController extends Controller
 {
-    public function create(Merchant $merchant)
+    public function create(Merchant $merchant, Request $request)
     {
         $services = $merchant->services;
-        return view('bookings.create', compact('merchant', 'services'));
+
+        // Get current or requested month/year for the calendar
+        $year = $request->input('year', date('Y'));
+        $month = $request->input('month', date('m'));
+
+        $startOfMonth = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endOfMonth = $startOfMonth->copy()->endOfMonth();
+
+        // Fetch booking counts per day for this merchant for the month
+        $bookedCounts = Booking::where('merchant_id', $merchant->id)
+            ->whereBetween('booking_date', [$startOfMonth->toDateString(), $endOfMonth->toDateString()])
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->selectRaw('DATE(booking_date) as date, count(*) as total')
+            ->groupBy('date')
+            ->pluck('total', 'date');
+
+        return view('bookings.create', compact('merchant', 'services', 'startOfMonth', 'bookedCounts', 'year', 'month'));
     }
 
     public function checkAvailability(Request $request, Merchant $merchant)
@@ -27,15 +44,31 @@ class BookingsController extends Controller
             'notes'         => 'nullable|string|max:500',
         ]);
 
+        // Check duplicate booking constraint
+        $existingBooking = Booking::where('merchant_id', $merchant->id)
+            ->where('booking_date', $request->booking_date)
+            ->where('client_phone', $request->client_phone)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->exists();
+
+        if ($existingBooking) {
+            return back()->withErrors([
+                'client_phone' => 'You already have an active or pending booking for this date at ' . $merchant->business_name . '.'
+            ])->withInput();
+        }
+
+        // Check daily cap (Max 10 clients)[cite: 7]
         $dailyBookingsCount = Booking::where('merchant_id', $merchant->id)
             ->where('booking_date', $request->booking_date)
             ->whereIn('status', ['pending', 'confirmed'])
             ->count();
 
         if ($dailyBookingsCount >= 10) {
-            return back()->withErrors([
-                'booking_date' => 'Sorry! This date is fully booked for ' . $merchant->business_name . ' (Maximum 10 clients reached).'
-            ])->withInput();
+            // Redirect to the fully booked page as requested
+            return redirect()->route('booking.fully-booked', [
+                'merchant' => $merchant->slug,
+                'date' => $request->booking_date
+            ]);
         }
 
         session([
@@ -52,6 +85,12 @@ class BookingsController extends Controller
         ]);
 
         return redirect()->route('booking.payment');
+    }
+
+    public function fullyBooked(Merchant $merchant, Request $request)
+    {
+        $date = $request->input('date', today()->toDateString());
+        return view('bookings.fully-booked', compact('merchant', 'date'));
     }
 
     public function success(Booking $booking)
